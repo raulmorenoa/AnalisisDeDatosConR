@@ -1,0 +1,79 @@
+---
+title: "Análisis y Tratamiento de Datos con R"
+subtitle: "Departamento de Matemática"
+author: "Dr. Carlos Almeida"
+institute: Escuela Politécnica Nacional
+titlegraphic: /Templates/EPN-Images/EPN-logo-big.jpg
+fontsize: 10pt
+date: "10 de noviembre de 2017"
+output: 
+  pdf_document:
+    template: ~/Templates/Rmarkdown/car-latex-ms-es.tex
+    keep_tex: true
+    fig_width: 7
+    fig_height: 6
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Bootstrap
+
+
+```{r}
+x = c(30,37,36,43,42,43,43,46,41,42)
+n = length(x)
+set.seed(1)
+# sample mean
+xbar = mean(x)
+
+nboot = 200
+# Generate 20 bootstrap samples, i.e. an n x 20 array of
+# random resamples from x.
+tmpdata = sample(x,n*nboot, replace=TRUE)
+bootstrapsample = matrix(tmpdata, nrow=n, ncol=nboot)
+
+# Compute the means xbar*
+xbarstar = colMeans(bootstrapsample)
+
+# Compute delta* for each bootstrap sample
+deltastar = xbarstar - xbar
+
+# Find the 0.1 and 0.9 quantile for deltastar
+d = quantile(deltastar, c(0.1, 0.9))
+
+# Calculate the 80\% confidence interval for the mean.
+ci = xbar - c(d[2], d[1])
+cat('Confidence interval: ',ci,'\n')
+```
+
+
+## Old Faithful: confidence intervals for the median:
+```{r}
+
+```
+## Bootstrap 95% CI for R-Squared
+```{r}
+library(boot)
+# function to obtain R-Squared from the data 
+rsq <- function(formula, data, indices) {
+  d <- data[indices,] # allows boot to select sample 
+  fit <- lm(formula, data=d)
+  return(summary(fit)$r.square)
+} 
+# bootstrapping with 1000 replications 
+results <- boot(data=mtcars, statistic=rsq, 
+  	R=1000, formula=mpg~wt+disp)
+
+# view results
+results 
+plot(results)
+
+# get 95% confidence interval 
+boot.ci(results, type="bca")
+
+```
+
+

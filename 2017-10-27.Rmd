@@ -1,0 +1,74 @@
+---
+title: "Análisis y Tratamiento de Datos con R"
+subtitle: "Departamento de Matemática"
+author: "Dr. Carlos Almeida"
+institute: Escuela Politécnica Nacional
+titlegraphic: /Templates/EPN-Images/EPN-logo-big.jpg
+fontsize: 10pt
+date: "27 octubre de 2017"
+always_allow_html: yes
+output: 
+  pdf_document:
+    template: ~/Templates/Rmarkdown/car-latex-ms-es.tex
+    keep_tex: true
+    fig_width: 7
+    fig_height: 6
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Ejemplo basado de http://blog.revolutionanalytics.com/2015/08/plotting-time-series-in-r.html y modificado
+
+## Time Series Plotting
+```{r}
+library(ggplot2)
+library(xts)
+library(dygraphs)
+library(quantmod)
+```
+
+## Get IBM and Linkedin stock data from Yahoo Finance
+
+```{r}
+yahoo.read <- function(symb){
+  getSymbols(symb, src = "yahoo", return.class = "xts")
+  expre <- parse(text = paste("df <- ", symb,"[, 4]", sep = ""))
+  eval(expre)
+  names(df) <- "Close"
+  return(df)
+}
+
+ibm  <- yahoo.read("IBM")
+lnkd <- yahoo.read("LKI.F")
+
+ggplot(ibm, aes(x = Index, y = Close)) + 
+  geom_line(aes(color="ibm")) +
+  geom_line(data=lnkd,aes(color="lnkd")) +
+  labs(color="Legend") +
+  scale_colour_manual("", breaks = c("ibm", "lnkd"),
+                      values = c("blue", "brown")) +
+  ggtitle("Closing Stock Prices: IBM & Linkedin") + 
+  theme(plot.title = element_text(lineheight=.7, face="bold"))
+```
+
+## Plot with the htmlwidget dygraphs
+
+
+```{r}
+stocks <- cbind(ibm,lnkd)
+names(stocks) <- c("..1", "..2")
+
+dygraph(stocks,ylab="Close", 
+        main="IBM and Linkedin Closing Stock Prices") %>%
+  dySeries("..1",label="IBM") %>%
+  dySeries("..2",label="LNKD") %>%
+  dyOptions(colors = c("blue","brown")) %>%
+  dyRangeSelector()
+```
+
+
+
