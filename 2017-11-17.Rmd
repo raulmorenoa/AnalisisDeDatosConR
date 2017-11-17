@@ -1,0 +1,94 @@
+---
+title: "Análisis y Tratamiento de Datos con R"
+subtitle: "Departamento de Matemática"
+author: "Dr. Carlos Almeida"
+institute: Escuela Politécnica Nacional
+titlegraphic: /Templates/EPN-Images/EPN-logo-big.jpg
+fontsize: 10pt
+date: "17 de noviembre de 2017"
+output: 
+  pdf_document:
+    template: ~/Templates/Rmarkdown/car-latex-ms-es.tex
+    keep_tex: true
+    fig_width: 7
+    fig_height: 6
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(car)
+library(boot)
+attach(Anscombe) # I'm going to use Anscombe data
+
+lm.out<-lm(education~income, data=Anscombe) #simple regression to obtain coef.
+regre.mle<-coef(lm.out)
+
+
+m <- mean(lm.out$resid) # 3.957485e-15
+s <- sd(lm.out$resid)   # 34.58725
+
+regre.sim <- function(data, mle){
+  n <- dim(data)[1]
+  data$education <- mle[2]*data$income + mle[1]+ rnorm(n, mean=0, sd=s)
+  return(data)
+}
+
+regre.stat<- function(data) {
+  lm.out<-lm(education~income, data=data)
+  return(lm.out$coefficients)
+}
+
+boot.out<-boot(Anscombe, statistic=regre.stat, R=100,
+               ran.gen=regre.sim,
+               sim="parametric", mle=regre.mle)
+
+opar <- par(mfrow = c(1,2))
+hist(boot.out$t[,1], freq=FALSE, main = "Intercept", xlab ="")
+lines(density(boot.out$t[,1]), col = "red")
+hist(boot.out$t[,2], freq=FALSE, main = "beta", xlab = "")
+lines(density(boot.out$t[,2]), col = "red")
+par(opar)
+
+boot.ci(boot.out, type = "basic", index = 1) #for intercept
+boot.ci(boot.out, type = "basic", index = 2) #for beta coef
+```
+
+
+```{r}
+minusL <- function(params,data){
+  -sum(log(dgamma(data,params[1],params[2])))
+}
+
+fit <- nlm(minusL,c(1,1),data=aircondit$hours)
+
+gammamedian <- function(data){
+ fit <- nlm(minusL,c(1,1),data=data)
+ qgamma(.5,fit$estimate[1],fit$estimate[2])
+}
+
+gengamma<-function(data,params){
+ rgamma(length(data),params[1],params[2])
+}
+
+pbootresults <- boot(aircondit$hours, gammamedian, R=999,
+                     sim="parametric",ran.gen=gengamma , mle=fit$estimate)
+
+
+dfplot <- data.frame(hours = pbootresults$t) 
+p <- ggplot(dfplot, aes(x=hours)) 
+p <- p + geom_histogram(aes(y=..density..), color="black", fill="white", bins = 8)
+p <- p + geom_density(alpha=.2, fill="#FF6666")
+p
+
+
+
+
+boot.ci(pbootresults,type=c("basic","perc","norm"))
+
+```
+

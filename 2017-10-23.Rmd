@@ -1,0 +1,25 @@
+---
+title: "Análisis y Tratamiento de Datos con R"
+subtitle: "Departamento de Matemática"
+author: "Dr. Carlos Almeida"
+institute: Escuela Politécnica Nacional
+titlegraphic: /Templates/EPN-Images/EPN-logo-big.jpg
+fontsize: 10pt
+date: "23 de octubre de 2017"
+output: 
+  beamer_presentation:
+    template: ~/Templates/Rmarkdown/car-latex-beamer.tex
+    keep_tex: true
+    toc: true
+    slide_level: 2
+    fig_width: 7
+    fig_height: 6
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Graficación de datos
+

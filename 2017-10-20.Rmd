@@ -1,0 +1,157 @@
+---
+title: "Análisis y Tratamiento de Datos con R"
+subtitle: "Departamento de Matemática"
+author: "Dr. Carlos Almeida"
+institute: Escuela Politécnica Nacional
+titlegraphic: /Templates/EPN-Images/EPN-logo-big.jpg
+fontsize: 10pt
+date: "20 de octubre de 2017"
+output: 
+  beamer_presentation:
+    template: ~/Templates/Rmarkdown/car-latex-beamer.tex
+    keep_tex: true
+    toc: true
+    slide_level: 2
+    fig_width: 7
+    fig_height: 6
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introducción al Lenguaje R
+
+Para instalar y cargar nuevos paquetes:
+
+```{r}
+install.packages("corrgram") ## Atención a las comillas, mayúsculas y minúsculas en el nombre del paquete.
+library(corrgram)
+require(corrgram)
+```
+
+El uso de la ayuda:
+
+```{r, eval=FALSE, echo = TRUE}
+help.start()
+help(eigen) # o sino:
+?eigen
+help.search("rgl") # o sinó:
+??rgl
+
+```
+
+Scripts y directorio de trabajo
+
+```{r, eval=FALSE, echo = TRUE}
+getwd()
+source(“histograma.R”)
+dir()
+setwd()
+```
+
+
+## Funcionamiento
+
+Nombres de los índices de un vector
+```{r}
+x <- 1:5
+x
+names(x)
+```
+ 
+Nombres de los elementos de un vector
+```{r} 
+names(x) <- c("a", "b", "c", "d", "e")
+x
+x[2]
+names(x)
+```
+ 
+Cuando trabajamos con matrices, estas presentan 2 dimensiones.
+```{r}
+y <- matrix(1:20, 4, 5)
+dim(y)
+```
+
+también:
+```{r}
+rownames(y) <- c("fila1", "fila2", "fila3", "fila4")
+colnames(y) <- c("col_A", "col_B", "col_C", "col_D", "col_E")
+y
+```
+
+Como ejemplo de manipulaciones:
+
+```{r}
+propios <- eigen(y[,1:4])
+propios # Este objeto es una lista con dos elementos.
+class(propios$values)
+class(propios$vectors)
+ 
+names(propios$values) <- 1:4
+names(propios$values) 
+ 
+names(propios) <- c("valores","vectores")
+# También puedo nombrar los elementos de la lista
+names(propios) # Consulta, etc...
+ 
+colnames(propios$vectores) <- c("vector_1","vector_2","vector_3","vector_4")
+propios
+
+## En un data.frame
+z <- as.data.frame(y)
+rownames(z) <- c("obs_1","obs_2","obs_3","obs_4")
+colnames(z) <- c("var_A","var_B","var_C","var_D","var_E")
+z # a ver cómo quedó.
+rownames(z) # y su consulta
+colnames(z)
+
+names(z) <- c("VAR_1","VAR_2","VAR_3","VAR_4","VAR_5")
+names(z)[3:5] <- c("Humedad","Temperatura","Salinidad")
+names(z)
+z
+```
+
+### Operaciones de comparación
+```{r}
+3 > 2  
+3 < 2  
+3 == 2 
+5 == 5 
+5 != 5
+```
+
+Casos particulares: NA, NULL y NaN
+```{r}
+is.na(NA)     
+is.na(5)      
+5 == NA       
+
+is.null(NULL) 
+is.nan(NaN)
+
+
+x <- -5:5
+x < 2     
+x == 2
+y <- 5:-5
+x == y    
+x >= y[1]
+
+x >= y & x <= y 
+
+## Filtrar
+
+x[x < 2.5 & x > -2.5]
+x[abs(x) < 2.5]
+
+```
+
+
+
+## Estructura de datos
+
+
+

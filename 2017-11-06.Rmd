@@ -1,0 +1,159 @@
+---
+title: "Análisis y Tratamiento de Datos con R"
+subtitle: "Departamento de Matemática"
+author: "Dr. Carlos Almeida"
+institute: Escuela Politécnica Nacional
+titlegraphic: /Templates/EPN-Images/EPN-logo-big.jpg
+fontsize: 10pt
+date: "6 de noviembre de 2017"
+output: 
+  pdf_document:
+    template: ~/Templates/Rmarkdown/car-latex-ms-es.tex
+    keep_tex: true
+    fig_width: 7
+    fig_height: 6
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Imputación de datos
+
+Basados en: https://www.r-bloggers.com/missing-value-treatment/
+
+```{r}
+# initialize the data
+data ("BostonHousing", package="mlbench")
+original <- BostonHousing  # backup original data
+
+# Introduce missing values
+set.seed(100)
+BostonHousing[sample(1:nrow(BostonHousing), 40), "rad"] <- NA
+BostonHousing[sample(1:nrow(BostonHousing), 40), "ptratio"] <- NA 
+```
+
+¿Que datos están perdidos?
+
+```{r}
+# Pattern of missing values
+library(mice)
+md.pattern(BostonHousing)
+```
+
+## Borrando observaciones
+- Si se tiene suficientes observaciones, no se debería perder mucho
+- No se introduce sesgos debido a alguna pérdida sistemática de datos
+  (representatividad)
+  
+  
+```{r}
+# Example
+lm(medv ~ ptratio + rad, data=BostonHousing, na.action=na.omit)
+```
+
+## Borrando variables
+
+Depende de la importancia del poder prtedictor que pueda tener esa
+variable.
+
+## Imputacióm usando la media, mediana o moda
+
+
+```{r}
+library(Hmisc)
+impute(BostonHousing$ptratio, mean)  # replace with mean
+impute(BostonHousing$ptratio, median)  # median
+impute(BostonHousing$ptratio, 20)  # replace specific number
+# or if you want to impute manually
+## BostonHousing$ptratio[is.na(BostonHousing$ptratio)] <- mean(BostonHousing$ptratio, na.rm = T)  # not run
+
+```
+
+Calculemos la precisión cando se imputa con la media:
+
+```{r}
+library(DMwR)
+actuals <- original$ptratio[is.na(BostonHousing$ptratio)]
+predicteds <- rep(mean(BostonHousing$ptratio, na.rm=T), length(actuals))
+regr.eval(actuals, predicteds)
+
+```
+
+## Imputación basada en predicciones:
+### kNN Imputación
+```{r}
+library(DMwR)
+knnOutput <- knnImputation(BostonHousing[, !names(BostonHousing) %in% "medv"],k =5)  # perform knn imputation.
+anyNA(knnOutput)
+#> FALSE
+```
+
+Calculemos la precisión
+```{r}
+actuals <- original$ptratio[is.na(BostonHousing$ptratio)]
+predicteds <- knnOutput[is.na(BostonHousing$ptratio), "ptratio"]
+regr.eval(actuals, predicteds)
+
+```
+
+
+### rpart
+
+Solo una de las variables redictoras tiene `NA` y puede tratar con
+variables factor
+
+
+```{r}
+library(rpart)
+class_mod <- rpart(rad ~ . - medv, data=BostonHousing[!is.na(BostonHousing$rad), ], method="class", na.action=na.omit)  # since rad is a factor
+anova_mod <- rpart(ptratio ~ . - medv, data=BostonHousing[!is.na(BostonHousing$ptratio), ], method="anova", na.action=na.omit)  # since ptratio is numeric.
+rad_pred <- predict(class_mod, BostonHousing[is.na(BostonHousing$rad), ])
+ptratio_pred <- predict(anova_mod, BostonHousing[is.na(BostonHousing$ptratio), ])
+```
+
+Calculemos la precisión para `ptratio`
+
+```{r}
+actuals <- original$ptratio[is.na(BostonHousing$ptratio)]
+predicteds <- ptratio_pred
+regr.eval(actuals, predicteds)
+```
+
+Para `rad`:
+
+```{r}
+actuals <- original$rad[is.na(BostonHousing$rad)]
+predicteds <- as.numeric(colnames(rad_pred)[apply(rad_pred, 1, which.max)])
+mean(actuals != predicteds) 
+```
+
+### MICE (Multivariate Imputation by Chained Equations)
+
+Produce multiples copias completas de los datos, con valores
+diferentes sólo para los valores perdidos:
+
+```{r}
+library(mice)
+library(randomForest)
+miceMod <- mice(BostonHousing[, !names(BostonHousing) %in% "medv"], method="rf")  # perform mice imputation, based on random forests.
+miceOutput <- complete(miceMod)  # generate the completed data.
+anyNA(miceOutput)
+```
+
+Para evaluar la precisión para `ptratio`:
+
+```{r}
+actuals <- original$ptratio[is.na(BostonHousing$ptratio)]
+predicteds <- miceOutput[is.na(BostonHousing$ptratio), "ptratio"]
+regr.eval(actuals, predicteds)
+
+```
+
+Y para `rad`:
+```{r}
+actuals <- original$rad[is.na(BostonHousing$rad)]
+predicteds <- miceOutput[is.na(BostonHousing$rad), "rad"]
+mean(actuals != predicteds)
+```

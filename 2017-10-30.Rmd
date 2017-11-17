@@ -1,0 +1,82 @@
+---
+title: "Análisis y Tratamiento de Datos con R"
+subtitle: "Departamento de Matemática"
+author: "Dr. Carlos Almeida"
+institute: Escuela Politécnica Nacional
+titlegraphic: /Templates/EPN-Images/EPN-logo-big.jpg
+fontsize: 10pt
+date: "27 octubre de 2017"
+output: 
+  pdf_document:
+    template: ~/Templates/Rmarkdown/car-latex-ms-es.tex
+    keep_tex: true
+    fig_width: 7
+    fig_height: 6
+    fig_caption: true
+---
+
+```{r}
+library(ggplot2)
+```
+
+
+## ggplot2
+```{r}
+qplot(diamonds$carat, diamonds$price)
+qplot(carat, price, data = diamonds)
+qplot(carat, price, data = diamonds,
+      colour=clarity)
+#qplot(carat, price, data = diamonds,
+#      geom=c("point", "smooth"), method=lm)
+qplot(carat, data = diamonds,
+      geom="histogram", bins =15)
+qplot(carat, data = diamonds,
+      geom="histogram", binwidth = 0.3)
+
+```
+
+
+
+
+
+```{r}
+d <- ggplot(diamonds,
+            aes(x=carat, y=price))
+d + geom_point()
+d + geom_point(aes(colour = carat))
+```
+
+```{r}
+ggplot(diamonds, aes(x = price)) +
+  geom_histogram(aes(y=..count../sum(..count..)), bins = 15) +
+  labs(y="Frecuencia",
+       x="Precio") + 
+  facet_wrap( ~ color)
+```
+
+```{r}
+p <- ggplot(diamonds, aes(x=price))
+p + geom_histogram(bins = 15)
+p + stat_bin(geom="area", bins = 15)
+p + stat_bin(geom="point", bins = 15)
+p + stat_bin(geom="line", bins = 15)
+p + geom_histogram(aes(fill = clarity), bins = 15)
+p + geom_histogram(aes(y = ..density..), bins = 15)
+```
+
+```{r}
+chols <- read.table(url("http://assets.datacamp.com/blog_assets/chol.txt"), header = TRUE)
+
+theme_update(plot.title = element_text(hjust = 0.5))
+
+ggplot(data=chols, aes(AGE)) + 
+  geom_histogram(aes(y =..density..), 
+                 breaks=seq(20, 50, by = 2), 
+                 col="red", 
+                 fill="green", 
+                 alpha = .2) + 
+  geom_density(col="black") + 
+  labs(title="Histograma para Edad") +
+  labs(x="Edad", y="Densidad")
+```
+

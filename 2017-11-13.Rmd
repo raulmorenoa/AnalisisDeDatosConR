@@ -1,0 +1,78 @@
+---
+title: "Análisis y Tratamiento de Datos con R"
+subtitle: "Departamento de Matemática"
+author: "Dr. Carlos Almeida"
+institute: Escuela Politécnica Nacional
+titlegraphic: /Templates/EPN-Images/EPN-logo-big.jpg
+fontsize: 10pt
+date: "13 de noviembre de 2017"
+output: 
+  pdf_document:
+    template: ~/Templates/Rmarkdown/car-latex-ms-es.tex
+    keep_tex: true
+    fig_width: 7
+    fig_height: 6
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(boot)
+
+dat <- data.frame(school = 1:15,
+                  LSAT = c(576,635,558,578,666,580,555,
+                           661,651,605,653,575,545,
+                           572,594),
+                  GPA = c(3.39,3.30,2.81,3.03,3.44,
+                          3.07,3.00,3.43,3.36,3.13,
+                          3.12,2.74,2.76,2.88,2.96)
+)
+
+s <- function(df, indices){
+  df <- df[indices,]
+  return(with(df, cor(LSAT,GPA)))
+}
+
+B <- 10^4
+datbootsample <- boot(data=dat , statistic=s , R=B)
+
+hist(datbootsample$t)
+
+## método percentil
+quantile(datbootsample$t, prob = c(.025,.975))
+
+boot.ci(datbootsample,type = c("norm", "basic", "perc", "bca"))
+
+
+
+# Nonparametric confidence intervals for mean failure time 
+# of the air-conditioning data as in Example 5.4 of Davison
+# and Hinkley (1997)
+mean.fun <- function(d, i) 
+{    m <- mean(d$hours[i])
+n <- length(i)
+v <- (n-1)*var(d$hours[i])/n^2
+c(m, v)
+}
+air.boot <- boot(aircondit, mean.fun, R = 999)
+boot.ci(air.boot, type = c("norm", "basic", "perc", "stud"))
+
+
+# Now using the log transformation
+# There are two ways of doing this and they both give the
+# same intervals.
+
+# Method 1
+boot.ci(air.boot, type = c("norm", "basic", "perc", "stud"), 
+        h = log, hdot = function(x) 1/x)
+
+# Method 2
+vt0 <- air.boot$t0[2]/air.boot$t0[1]^2
+vt <- air.boot$t[, 2]/air.boot$t[ ,1]^2
+boot.ci(air.boot, type = c("norm", "basic", "perc", "stud"), 
+        t0 = log(air.boot$t0[1]), t = log(air.boot$t[,1]),
+        var.t0 = vt0, var.t = vt)
+```
