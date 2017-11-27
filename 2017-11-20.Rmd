@@ -1,0 +1,166 @@
+---
+title: "Análisis y Tratamiento de Datos con R"
+subtitle: "Departamento de Matemática"
+author: "Dr. Carlos Almeida"
+institute: Escuela Politécnica Nacional
+titlegraphic: /Templates/EPN-Images/EPN-logo-big.jpg
+fontsize: 10pt
+date: "20 de noviembre de 2017"
+output: 
+  pdf_document:
+    template: ~/Templates/Rmarkdown/car-latex-ms-es.tex
+    keep_tex: true
+    fig_width: 7
+    fig_height: 6
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("~/Documents/Cursos/2017B/AnalisisDeDatosConR/Lecturas")
+```
+
+## Suavizamiento por núcleos (Kernel  smoothing) 
+
+```{r}
+rec <- function(x) (abs(x) < 1) * 0.5
+tri <- function(x) (abs(x) < 1) * (1 - abs(x))
+gauss <- function(x) 1/sqrt(2*pi) * exp(-(x^2)/2)
+x <- seq(from = -3, to = 3, by = 0.001)
+plot(x, rec(x), type = "l", ylim = c(0,1), lty = 1,
+  ylab = expression(K(x)))
+  lines(x, tri(x), lty = 2)
+  lines(x, gauss(x), lty = 3)
+  legend("topleft", legend = c("Rectangular", "Triangular",
+          "Gaussian"), lty = 1:3, title = "kernel functions",
+  bty = "n")
+```
+
+```{r}
+x <- c(0, 1, 1.1, 1.5, 1.9, 2.8, 2.9, 3.5)
+n <- length(x)
+xgrid <- seq(from = min(x) - 1, to = max(x) + 1, by = 0.01)
+h <- 0.4
+bumps <- sapply(x, function(a) gauss((xgrid - a)/h)/(n * h))
+
+plot(xgrid, rowSums(bumps), ylab = expression(hat(f)(x)),
+     type = "l", xlab = "x", lwd = 2)
+rug(x, lwd = 2)
+out <- apply(bumps, 2, function(b) lines(xgrid, b))
+
+plot(density(x, bw = .4))
+```
+
+
+
+## Regresión (modelos lineales)
+```{r, include = TRUE}
+fit <- lm(weight ~ height, data=women)
+summary(fit)
+women$weight
+fitted(fit)
+residuals(fit)
+```
+
+```{r}
+ggplot(women, aes(x = height, y = weight)) +
+  geom_point(shape=1) + 
+  geom_smooth(method=lm, se = FALSE) +
+  xlab("Height (in inches)") +
+  ylab("Weight (in pounds)")
+```
+
+
+```{r}
+plot(women$height,women$weight,
+    xlab="Height (in inches)",
+    ylab="Weight (in pounds)")
+abline(fit)
+```
+
+
+Otro ejemplo
+
+```{r}
+## leer los datos
+library(ggplot2)
+# library(Quandl)
+# Quandl.api_key("U642ibVsYYxzqPyc7hBx")
+library(quantmod)
+yahoo.read <- function(symb){
+  getSymbols(symb, src = "yahoo", return.class = "xts")
+  expre <- parse(text = paste("df <- ", symb,"[, 4]", sep = ""))
+  eval(expre)
+  names(df) <- "Close"
+  na.fill(df)
+  return(df)
+}
+
+hsi.df  <- read.csv("Data/HSI.csv")
+ckh.df  <- read.csv("Data/0001.HK.csv")
+
+colnames(hsi.df)[6] <- "Adjusted.Close"
+hsi.df <- hsi.df[order(as.Date(hsi.df$Date)),]
+
+hsi.Adjusted.Close <- hsi.df$Adjusted.Close
+hsi.Return <- diff(hsi.Adjusted.Close)/hsi.Adjusted.Close[-length(hsi.Adjusted.Close)]
+hsi.Return <- c(NA,hsi.Return)
+hsi.df$Return <- hsi.Return
+hsi.df <- na.omit(hsi.df)
+hsi.Return <- hsi.df[,c("Date","Return")]
+
+
+colnames(ckh.df)[6] <- "Adjusted.Close"
+ckh.df <- ckh.df[order(as.Date(ckh.df$Date)),]
+ckh.Adjusted.Close <- ckh.df$Adjusted.Close
+ckh.Return <- diff(ckh.Adjusted.Close)/ckh.Adjusted.Close[-length(ckh.Adjusted.Close)]
+ckh.Return <- c(NA,ckh.Return)
+ckh.df <- na.omit(ckh.df)
+ckh.df$Return <- ckh.Return
+ckh.Return <- ckh.df[,c("Date","Return")]
+
+hsi.ckh.returns <- merge(hsi.Return, ckh.Return, by='Date')
+hsi.ckh.returns <- na.omit(hsi.ckh.returns)
+colnames(hsi.ckh.returns) <- c("Date","hsi.Return","ckh.Return")
+
+usa.risk.free <- 0.3/100
+hsi.risk.premium <- 0.6/10
+
+
+hsi.ckh.returns$hsi.Risk.free <- usa.risk.free + hsi.risk.premium
+hsi.ckh.returns$hsi.Risk.premium <- hsi.ckh.returns$hsi.Return - hsi.ckh.returns$hsi.Risk.free
+hsi.Return.vector <- as.vector(hsi.ckh.returns$hsi.Return)
+ckh.Return.vector <- as.vector(hsi.ckh.returns$ckh.Return)
+cov.hsi.ckh <- cov(ckh.Return.vector, hsi.Return.vector)
+var.hk <- var(hsi.Return.vector)
+capm_beta = cov.hsi.ckh/var.hk
+
+fit <- lm(ckh.Return ~ hsi.Risk.premium, data = hsi.ckh.returns)
+summary(fit)
+
+```
+
+```{r}
+
+equation = function(x) {
+  lm_coef <- list(a = round(coef(x)[1], digits = 2),
+                  b = round(coef(x)[2], digits = 2),
+                  r2 = round(summary(x)$r.squared, digits = 2));
+  lm_eq <- substitute(italic(y) == a + b %.% italic(x)*","~~italic(R)^2~"="~r2,lm_coef)
+  as.character(as.expression(lm_eq));                 
+}
+
+p11 <- ggplot(hsi.ckh.returns, aes(x=hsi.Risk.premium, y=ckh.Return)) + geom_point(shape=1) + geom_smooth(method=lm, se=FALSE) +
+      ggtitle("CKH regression line") +
+      scale_x_continuous(name = "HSI risk premium") +
+      scale_y_continuous(name = "CKH return") +
+      annotate("rect", xmin = -0.05, xmax = 0.0, ymin = -0.056, ymax = -0.044, fill="white", colour="red") +
+      annotate("text", x = -0.05, y = 0.0, label = equation(fit), parse = TRUE)
+p11
+```
+
+
+
+
+
+

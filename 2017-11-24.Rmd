@@ -1,0 +1,142 @@
+---
+title: "Análisis y Tratamiento de Datos con R"
+subtitle: "Departamento de Matemática"
+author: "Dr. Carlos Almeida"
+institute: Escuela Politécnica Nacional
+titlegraphic: /Templates/EPN-Images/EPN-logo-big.jpg
+fontsize: 10pt
+date: "24 de noviembre de 2017"
+output: 
+  pdf_document:
+    template: ~/Templates/Rmarkdown/car-latex-ms-es.tex
+    keep_tex: true
+    fig_width: 7
+    fig_height: 6
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("~/Documents/Cursos/2017B/AnalisisDeDatosConR/Lecturas")
+```
+
+## Modelos lineales generalizados
+
+
+### Ejemplo 1
+
+```{r}
+library(effects)
+data(Arrests)
+dim(Arrests)
+
+```
+
+
+```{r}
+Arrests$year <- as.factor(Arrests$year)
+arrests.mod <- glm(released ~ employed + citizen + checks + colour*year + colour*age, 
+                   family=binomial, data=Arrests)
+summary(arrests.mod)
+```
+
+```{r}
+library(car) # for the Anova function
+Anova(arrests.mod)
+```
+
+```{r}
+# model.matrix(arrests.mod)
+```
+
+Effects plot
+
+```{r}
+plot(effect("colour:year:age", arrests.mod, xlevels=list(age=15:45)), multiline=TRUE, ylab="Probability(released)", rug=FALSE)
+```
+
+  
+  
+```{r}
+arrests.effects <- allEffects(arrests.mod, xlevels=list(age=15:45))
+plot(arrests.effects, ylab="Probability(released)", rug=FALSE)
+```
+
+```{r}
+plot(effect("colour:year:age", arrests.mod, xlevels=list(age=15:45)),rescale.axis=FALSE, multiline=TRUE, ylab="Probability(released)",rug=FALSE)
+```
+
+
+```{r}
+colour.year <- effect("colour*year", arrests.mod)
+colour.year
+summary(colour.year)
+```
+
+
+En un modelo de regresión más general:
+```{r}
+data(Prestige)
+library(splines) # for bs
+prestige.mod <- lm(prestige ~ log(income) + bs(education, df=3) + poly(women, 2),
+data=Prestige)
+summary(prestige.mod)
+```
+
+```{r}
+Anova(prestige.mod)
+```
+
+```{r}
+plot(allEffects(prestige.mod, default.levels=50))
+```
+
+
+Otro modelo con interacciones en las covariables:
+
+```{r}
+data(Cowles)
+cowles.mod <- glm(volunteer ~ sex + neuroticism*extraversion, data=Cowles, family=binomial)
+summary(cowles.mod)
+```
+
+```{r}
+Anova(cowles.mod)
+```
+
+```{r}
+plot(effect("neuroticism*extraversion", cowles.mod))
+```
+
+Alternativamente:
+
+```{r}
+plot(effect("neuroticism*extraversion", cowles.mod,xlevels=list(neuroticism=0:24, extraversion=seq(0, 24, 6))),multiline=TRUE, ylab="Probability(Volunteer)")
+```
+
+```{r}
+ne.effect <- effect("neuroticism*extraversion", cowles.mod, xlevels=list(neuroticism=seq(0, 24, 6), extraversion=0:24), confidence.level=2/3)
+ne.sumry <- summary(ne.effect, type="link")
+fit <- ne.sumry$effect # fitted values for effect
+lower <- ne.sumry$lower
+upper <- ne.sumry$upper
+par(mar=c(5, 4, 4, 4)+.1) # leave some extra room
+plot(c(0, 30), range(c(lower, upper)), type="n", xaxt="n",
+xlab="Extraversion", ylab="Logit of Volunteering")
+axis(1, at=seq(0, 24, 6))
+text(25, 1.8, "Neuroticism", adj=0)
+probabilityAxis() # right-side axis, from car package
+neuroticism <- seq(0, 24, 6)
+for (neuro in 1:5){ # plot effects
+   lines(0:24, fit[neuro,], lwd=2)
+   text(25, fit[neuro, 25], paste("N = ", neuroticism[neuro]), adj=0)
+}
+extraversion <- 0:24
+extra <- seq(1, 25, by=6)
+for (neuro in c(1, 3, 5)){ # plot confidence bars
+   arrows(extraversion[extra], lower[neuro, extra],
+   extraversion[extra], upper[neuro, extra],
+   angle=90, code=3, lty=2, length=0.05, col="red")
+}
+```
+
